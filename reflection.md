@@ -29,9 +29,25 @@ I designed PawPal+ with four main classes following a clean separation of concer
 
 **b. Design changes**
 
-- This section will be completed during Phase 2 (implementation).
-- As we build the scheduling logic, we may discover missing relationships or refactor responsibilities between classes.
-- Any significant changes to the UML structure or class behavior will be documented here.
+During Phase 2 implementation, I made the following refinements to the initial design:
+
+1. **Added `completed` field to Task** - Tasks now track whether they've been completed using a boolean flag. This enables progress tracking and helps users see what's been done vs. what's pending.
+
+2. **Added `mark_complete()` method** - Instead of just storing completion status, I added a dedicated method to change the task's state, making the API clearer.
+
+3. **Added `get_all_tasks()` to Owner** - To simplify scheduling across multiple pets, I added a helper method that collects all tasks from all of the owner's pets. This makes it easier for the Scheduler to work with aggregate data.
+
+4. **Enhanced priority scoring algorithm** - The initial design had a simple `get_priority_score()`, but during implementation I realized that certain task categories (medication, feeding) should always be urgent regardless of assigned priority. I added category-based bonuses to the score calculation.
+
+5. **Added `__str__` methods** - For better debugging and demo output, I added readable string representations to all classes.
+
+6. **Fixed type hints** - Changed `any` to `Any` (from typing module) to follow Python conventions.
+
+**Why these changes made sense:**
+- Task completion tracking is essential for the UI to show progress
+- The priority scoring refinement reflects real-world pet care (meds and food can't be skipped)
+- Helper methods like `get_all_tasks()` reduce coupling between Scheduler and Owner
+- The `__str__` methods make debugging and testing much easier
 
 ---
 
@@ -39,13 +55,35 @@ I designed PawPal+ with four main classes following a clean separation of concer
 
 **a. Constraints and priorities**
 
-- What constraints does your scheduler consider (for example: time, priority, preferences)?
-- How did you decide which constraints mattered most?
+The scheduler considers multiple constraints in this order of importance:
+
+1. **Time constraint (hard limit)** - Never schedule tasks beyond available time per day
+2. **Task priority (1-5 scale)** - Higher priority tasks are scheduled first
+3. **Task category urgency** - Medication and feeding tasks get automatic priority boost
+4. **Task duration** - Shorter-duration tasks can fit in small time gaps
+5. **Owner preferences** (future) - Reserved for owner-specific preferences (start time, order, etc.)
+
+**Decision-making process:**
+- Started with simple priority (1-5 scale)
+- Observed that all feeding and medication tasks are inherently urgent → added category-based scoring
+- Time constraint is non-negotiable since the problem states "available time"
+- Sorted tasks by calculated priority score in descending order
 
 **b. Tradeoffs**
 
-- Describe one tradeoff your scheduler makes.
-- Why is that tradeoff reasonable for this scenario?
+**Tradeoff: Greedy scheduling vs. optimal scheduling**
+
+My implementation uses a **greedy algorithm** - it sorts tasks by priority and fits them into available time in order, without trying to rearrange or remove lower-priority tasks to fit more tasks overall.
+
+*Example:* If a low-priority task (grooming, 15 min) fits in the schedule and there's remaining time, it stays. A higher-priority task that's 20 min isn't added if only 10 min remains, even though removing grooming would make room.
+
+*Why this tradeoff is reasonable:*
+- **Simplicity**: Easy to understand and explain to users
+- **Predictability**: The schedule doesn't change unexpectedly when tasks are added/removed
+- **Real-world applicability**: Pet owners likely follow a routine order; rearranging too much feels chaotic
+- **Extensibility**: If better scheduling is needed later, algorithms can be swapped in
+
+*Downside:* Might not maximize task count fits in some edge cases.
 
 ---
 
