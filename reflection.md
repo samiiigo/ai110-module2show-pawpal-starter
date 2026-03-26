@@ -2,6 +2,14 @@
 
 ## 1. System Design
 
+### Core Actions (from scenario analysis)
+
+1. **Add/manage pets** - Owner creates a pet profile with basic info (name, species, age, special needs)
+2. **Create and manage care tasks** - Owner adds tasks (walk, feeding, meds, enrichment, grooming) with duration and priority level
+3. **Generate daily schedule** - App produces a daily plan that selects and orders tasks based on time available, priorities, and owner preferences
+
+---
+
 **a. Initial design**
 
 - Briefly describe your initial UML design.
