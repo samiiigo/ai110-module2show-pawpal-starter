@@ -12,13 +12,26 @@
 
 **a. Initial design**
 
-- Briefly describe your initial UML design.
-- What classes did you include, and what responsibilities did you assign to each?
+I designed PawPal+ with four main classes following a clean separation of concerns:
+
+1. **Owner** - Represents the pet owner with their name, email, available time per day, and preferences. Manages the collection of pets they own. Responsibilities: tracking owner constraints and preferences.
+
+2. **Pet** - Represents a pet with attributes like name, species, age, and special needs. Holds a collection of care tasks assigned to that pet. Responsibilities: storing pet information and managing tasks specific to the pet.
+
+3. **Task** - Represents a discrete care activity (walk, feeding, medication, etc.) using dataclass for clean data storage. Each task has a name, description, duration in minutes, priority level (1-5), category, and frequency. Methods include `get_priority_score()` to calculate urgency and `is_urgent()` to flag time-sensitive tasks.
+
+4. **Scheduler** - The core logic engine that generates daily schedules. Takes an owner and pet, considers available time, and produces an ordered list of tasks that fit within constraints. Key methods: `prioritize_tasks()` to rank by importance, `assign_times()` to slot tasks into time slots, and `explain_plan()` to justify scheduling decisions.
+
+**Design rationale:**
+- Used dataclasses for Task, Pet, and Owner to keep data structures clean and maintainable
+- Created a separate Scheduler class so scheduling logic is decoupled from data representation
+- Relationships: Owner has many Pets, each Pet has many Tasks, and Scheduler orchestrates the planning
 
 **b. Design changes**
 
-- Did your design change during implementation?
-- If yes, describe at least one change and why you made it.
+- This section will be completed during Phase 2 (implementation).
+- As we build the scheduling logic, we may discover missing relationships or refactor responsibilities between classes.
+- Any significant changes to the UML structure or class behavior will be documented here.
 
 ---
 
