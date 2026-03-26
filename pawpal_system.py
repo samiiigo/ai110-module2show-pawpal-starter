@@ -7,8 +7,8 @@ daily plans based on constraints and priorities.
 """
 
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional
-from datetime import datetime, time
+from typing import List, Dict, Optional, Tuple
+from datetime import datetime, time, timedelta
 
 
 @dataclass
@@ -22,6 +22,7 @@ class Task:
         priority: Priority level (1-5, where 5 is highest)
         category: Category of task (e.g., 'exercise', 'nutrition', 'medication')
         frequency: How often this task occurs (e.g., 'daily', 'twice-daily', 'weekly')
+        completed: Whether the task has been completed today
     """
     name: str
     description: str
@@ -29,22 +30,31 @@ class Task:
     priority: int  # 1-5, 5 is highest
     category: str
     frequency: str = "daily"
+    completed: bool = False
     
     def get_priority_score(self) -> int:
-        """Calculate the priority score for scheduling.
+        """Calculate the priority score for scheduling."""
+        # Higher priority value = higher score, and urgent categories get bonus
+        score = self.priority * 100
         
-        Returns:
-            An integer representing the task's importance for scheduling.
-        """
-        pass
+        # Add urgency bonus for medication and feeding tasks
+        if self.category in ("medication", "feeding"):
+            score += 50
+        
+        return score
     
     def is_urgent(self) -> bool:
-        """Determine if this task is urgent.
-        
-        Returns:
-            True if the task should be prioritized, False otherwise.
-        """
-        pass
+        """Determine if this task is urgent."""
+        return self.priority >= 4 or self.category in ("medication", "feeding")
+    
+    def mark_complete(self) -> None:
+        """Mark this task as completed."""
+        self.completed = True
+    
+    def __str__(self) -> str:
+        """Return a readable string representation of the task."""
+        status = "✓" if self.completed else "○"
+        return f"{status} {self.name} ({self.duration_minutes}min, P{self.priority})"
 
 
 @dataclass
@@ -65,28 +75,26 @@ class Pet:
     tasks: List[Task] = field(default_factory=list)
     
     def get_info(self) -> Dict[str, any]:
-        """Return pet information as a dictionary.
-        
-        Returns:
-            A dictionary containing pet details and special needs.
-        """
-        pass
+        """Return pet information as a dictionary."""
+        return {
+            "name": self.name,
+            "species": self.species,
+            "age": self.age,
+            "special_needs": self.special_needs,
+            "task_count": len(self.tasks)
+        }
     
     def add_task(self, task: Task) -> None:
-        """Add a care task to this pet's task list.
-        
-        Args:
-            task: The Task object to add.
-        """
-        pass
+        """Add a care task to this pet's task list."""
+        self.tasks.append(task)
     
     def get_tasks(self) -> List[Task]:
-        """Retrieve all tasks for this pet.
-        
-        Returns:
-            A list of Task objects assigned to this pet.
-        """
-        pass
+        """Retrieve all tasks for this pet."""
+        return self.tasks
+    
+    def __str__(self) -> str:
+        """Return a readable string representation of the pet."""
+        return f"{self.name} ({self.species}, {self.age} years old)"
 
 
 @dataclass
@@ -107,28 +115,27 @@ class Owner:
     pets: List[Pet] = field(default_factory=list)
     
     def add_pet(self, pet: Pet) -> None:
-        """Add a pet to the owner's collection.
-        
-        Args:
-            pet: The Pet object to add.
-        """
-        pass
+        """Add a pet to the owner's collection."""
+        self.pets.append(pet)
     
     def get_pets(self) -> List[Pet]:
-        """Retrieve all pets owned by this owner.
-        
-        Returns:
-            A list of Pet objects.
-        """
-        pass
+        """Retrieve all pets owned by this owner."""
+        return self.pets
     
     def set_preferences(self, prefs: Dict[str, any]) -> None:
-        """Update the owner's preferences and constraints.
-        
-        Args:
-            prefs: Dictionary of preferences to set.
-        """
-        pass
+        """Update the owner's preferences and constraints."""
+        self.preferences.update(prefs)
+    
+    def get_all_tasks(self) -> List[Task]:
+        """Retrieve all tasks across all pets."""
+        all_tasks = []
+        for pet in self.pets:
+            all_tasks.extend(pet.get_tasks())
+        return all_tasks
+    
+    def __str__(self) -> str:
+        """Return a readable string representation of the owner."""
+        return f"{self.name} ({len(self.pets)} pet{'s' if len(self.pets) != 1 else ''})"
 
 
 @dataclass
@@ -158,37 +165,82 @@ class Scheduler:
         Returns:
             A list of Task objects ordered for the day, or empty if not enough time.
         """
-        pass
+        # Get all tasks for this pet
+        tasks = self.pet.get_tasks()
+        
+        if not tasks:
+            return []
+        
+        # Sort tasks by priority
+        prioritized = self.prioritize_tasks(tasks)
+        
+        # Fit tasks into available time
+        scheduled = []
+        total_time = 0
+        
+        for task in prioritized:
+            if total_time + task.duration_minutes <= self.available_time:
+                scheduled.append(task)
+                total_time += task.duration_minutes
+        
+        self.daily_schedule = scheduled
+        return scheduled
     
     def prioritize_tasks(self, tasks: List[Task]) -> List[Task]:
-        """Sort tasks by priority and importance.
-        
-        Args:
-            tasks: List of Task objects to prioritize.
-            
-        Returns:
-            A sorted list of tasks, highest priority first.
-        """
-        pass
+        """Sort tasks by priority and importance."""
+        # Sort by priority score in descending order (highest first)
+        return sorted(tasks, key=lambda t: t.get_priority_score(), reverse=True)
     
-    def assign_times(self, tasks: List[Task]) -> Dict[str, any]:
+    def assign_times(self, tasks: List[Task]) -> Dict[str, Tuple[str, str]]:
         """Assign start times to each task in the schedule.
         
-        Args:
-            tasks: Ordered list of tasks to schedule.
-            
         Returns:
-            A dictionary mapping task names to start times and end times.
+            A dictionary mapping task names to (start_time, end_time) tuples.
         """
-        pass
+        schedule_dict = {}
+        current_time = 8 * 60  # Start at 8:00 AM (480 minutes from midnight)
+        
+        for task in tasks:
+            start_hour = current_time // 60
+            start_min = current_time % 60
+            start_time = f"{start_hour:02d}:{start_min:02d}"
+            
+            end_time_minutes = current_time + task.duration_minutes
+            end_hour = end_time_minutes // 60
+            end_min = end_time_minutes % 60
+            end_time = f"{end_hour:02d}:{end_min:02d}"
+            
+            schedule_dict[task.name] = (start_time, end_time)
+            current_time = end_time_minutes
+        
+        return schedule_dict
     
     def explain_plan(self, schedule: List[Task]) -> str:
-        """Generate a human-readable explanation of why this schedule was chosen.
+        """Generate a human-readable explanation of why this schedule was chosen."""
+        if not schedule:
+            return f"Cannot schedule tasks for {self.pet.name} - not enough time available."
         
-        Args:
-            schedule: The list of scheduled tasks.
-            
-        Returns:
-            A string explaining the scheduling decisions and reasoning.
-        """
-        pass
+        explanation = f"Daily Schedule for {self.pet.name}:\n"
+        explanation += f"Available time: {self.available_time} minutes\n\n"
+        
+        time_dict = self.assign_times(schedule)
+        total_scheduled = 0
+        
+        for task in schedule:
+            start_time, end_time = time_dict[task.name]
+            explanation += f"  {start_time} - {end_time}: {task.name} ({task.duration_minutes}min)\n"
+            explanation += f"    Priority: {task.priority}/5 | Category: {task.category}\n"
+            total_scheduled += task.duration_minutes
+        
+        explanation += f"\nTotal scheduled: {total_scheduled}/{self.available_time} minutes\n"
+        explanation += f"Scheduling strategy: Prioritized by importance and urgency.\n"
+        
+        if total_scheduled < self.available_time:
+            remaining = self.available_time - total_scheduled
+            explanation += f"Recommended: Use remaining {remaining} minutes for free play or relaxation."
+        
+        return explanation
+    
+    def __str__(self) -> str:
+        """Return a readable string representation of the scheduler."""
+        return f"Scheduler for {self.pet.name} ({len(self.daily_schedule)} tasks scheduled)"
