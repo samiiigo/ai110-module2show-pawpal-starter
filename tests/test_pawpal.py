@@ -406,6 +406,31 @@ class TestScheduler:
         assert pet.get_tasks()[1].completed is False
         assert pet.get_tasks()[1].due_date == pet.get_tasks()[0].due_date + timedelta(days=1)
 
+    def test_mark_task_complete_creates_next_weekly_task(self):
+        """Verify completing a weekly task creates a new task 7 days later."""
+        owner = Owner("Jordan", "jordan@example.com", 120)
+        pet = Pet("Mochi", "dog", 3)
+        owner.add_pet(pet)
+
+        task = Task(
+            "Grooming",
+            "Weekly grooming",
+            20,
+            3,
+            "grooming",
+            frequency="weekly",
+            scheduled_time="12:00",
+        )
+        pet.add_task(task)
+
+        scheduler = Scheduler(owner, pet, 120)
+        scheduler.mark_task_complete("Grooming", pet_name="Mochi")
+
+        assert len(pet.get_tasks()) == 2
+        assert pet.get_tasks()[0].completed is True
+        assert pet.get_tasks()[1].completed is False
+        assert pet.get_tasks()[1].due_date == pet.get_tasks()[0].due_date + timedelta(days=7)
+
     def test_detect_conflicts_returns_warnings(self):
         """Verify conflict detection reports same-slot task clashes."""
         owner = Owner("Jordan", "jordan@example.com", 120)
