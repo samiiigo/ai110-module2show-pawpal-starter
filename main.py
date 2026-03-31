@@ -54,7 +54,8 @@ def main():
             duration_minutes=30,
             priority=5,
             category="exercise",
-            frequency="daily"
+            frequency="daily",
+            scheduled_time="09:30",
         ),
         Task(
             name="Breakfast",
@@ -62,7 +63,8 @@ def main():
             duration_minutes=10,
             priority=5,
             category="feeding",
-            frequency="daily"
+            frequency="daily",
+            scheduled_time="08:00",
         ),
         Task(
             name="Dinner",
@@ -70,7 +72,8 @@ def main():
             duration_minutes=10,
             priority=5,
             category="feeding",
-            frequency="daily"
+            frequency="daily",
+            scheduled_time="18:00",
         ),
         Task(
             name="Playtime",
@@ -78,7 +81,8 @@ def main():
             duration_minutes=20,
             priority=3,
             category="enrichment",
-            frequency="daily"
+            frequency="daily",
+            scheduled_time="17:00",
         ),
         Task(
             name="Grooming",
@@ -86,7 +90,8 @@ def main():
             duration_minutes=15,
             priority=2,
             category="grooming",
-            frequency="weekly"
+            frequency="weekly",
+            scheduled_time="12:00",
         ),
     ]
     
@@ -106,7 +111,8 @@ def main():
             duration_minutes=5,
             priority=5,
             category="feeding",
-            frequency="daily"
+            frequency="daily",
+            scheduled_time="08:00",
         ),
         Task(
             name="Dinner",
@@ -114,7 +120,8 @@ def main():
             duration_minutes=5,
             priority=5,
             category="feeding",
-            frequency="daily"
+            frequency="daily",
+            scheduled_time="18:00",
         ),
         Task(
             name="Litter Box",
@@ -122,7 +129,8 @@ def main():
             duration_minutes=10,
             priority=4,
             category="maintenance",
-            frequency="daily"
+            frequency="daily",
+            scheduled_time="08:00",
         ),
         Task(
             name="Playtime",
@@ -130,7 +138,8 @@ def main():
             duration_minutes=15,
             priority=3,
             category="enrichment",
-            frequency="daily"
+            frequency="daily",
+            scheduled_time="16:30",
         ),
     ]
     
@@ -142,19 +151,40 @@ def main():
         print(f"  - {task}")
     print()
     
-    # Step 5: Generate schedules
+    # Step 5: Demonstrate sorting and filtering
+    print("=" * 60)
+    print("SORTING AND FILTERING")
+    print("=" * 60)
+    print("Mochi tasks before sorting:")
+    for task in mochi.get_tasks():
+        print(f"  - {task.name} at {task.scheduled_time}")
+    print()
+
+    scheduler_mochi = Scheduler(
+        owner=owner,
+        pet=mochi,
+        available_time=owner.available_time_per_day
+    )
+    sorted_by_time = scheduler_mochi.sort_by_time(mochi.get_tasks())
+
+    print("Mochi tasks sorted by time:")
+    for task in sorted_by_time:
+        print(f"  - {task.name} at {task.scheduled_time}")
+    print()
+
+    pending_mochi = scheduler_mochi.filter_tasks(pet_name="Mochi", completed=False)
+    print(f"Pending tasks for Mochi: {len(pending_mochi)}")
+    for task in pending_mochi:
+        print(f"  - {task.name} ({task.frequency})")
+    print()
+
+    # Step 6: Generate schedules
     print("=" * 60)
     print("GENERATING DAILY SCHEDULES")
     print("=" * 60)
     print()
     
     # Schedule for Mochi
-    scheduler_mochi = Scheduler(
-        owner=owner,
-        pet=mochi,
-        available_time=owner.available_time_per_day
-    )
-    
     mochi_schedule = scheduler_mochi.generate_schedule()
     print(scheduler_mochi.explain_plan(mochi_schedule))
     print()
@@ -170,7 +200,19 @@ def main():
     print(scheduler_luna.explain_plan(luna_schedule))
     print()
     
-    # Step 6: Summary
+    # Step 7: Conflict detection
+    print("=" * 60)
+    print("CONFLICT DETECTION")
+    print("=" * 60)
+    conflict_warnings = scheduler_mochi.detect_conflicts()
+    if conflict_warnings:
+        for warning in conflict_warnings:
+            print(f"WARNING: {warning}")
+    else:
+        print("No conflicts found.")
+    print()
+
+    # Step 8: Summary
     print("=" * 60)
     print("SUMMARY")
     print("=" * 60)
@@ -181,17 +223,29 @@ def main():
     print(f"Luna's scheduled tasks: {len(luna_schedule)}/{len(luna_tasks)}")
     print()
     
-    # Step 7: Test task completion
+    # Step 9: Test task completion and recurring automation
     print("=" * 60)
-    print("TESTING TASK COMPLETION")
+    print("TESTING TASK COMPLETION + RECURRING")
     print("=" * 60)
     print()
     
     if mochi_schedule:
         task_to_complete = mochi_schedule[0]
+        before_count = len(mochi.get_tasks())
         print(f"Before completion: {task_to_complete}")
-        task_to_complete.mark_complete()
+        scheduler_mochi.mark_task_complete(task_to_complete.name, pet_name="Mochi")
         print(f"After completion:  {task_to_complete}")
+        after_count = len(mochi.get_tasks())
+        print(f"Task count before: {before_count}, after: {after_count}")
+
+        if after_count > before_count:
+            recurring_task = mochi.get_tasks()[-1]
+            print(
+                f"New recurring task created: {recurring_task.name} due {recurring_task.due_date} at {recurring_task.scheduled_time}"
+            )
+
+        completed_tasks = scheduler_mochi.filter_tasks(pet_name="Mochi", completed=True)
+        print(f"Completed tasks for Mochi: {len(completed_tasks)}")
         print()
 
 

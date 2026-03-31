@@ -9,6 +9,7 @@ Tests verify key behaviors of the system:
 """
 
 import pytest
+from datetime import timedelta
 from pawpal_system import Owner, Pet, Task, Scheduler
 
 
@@ -342,6 +343,85 @@ class TestScheduler:
         schedule = scheduler.generate_schedule()
         
         assert schedule == []
+
+    def test_sort_by_time_orders_hhmm(self):
+        """Verify that tasks are sorted by scheduled HH:MM time."""
+        owner = Owner("Jordan", "jordan@example.com", 120)
+        pet = Pet("Mochi", "dog", 3)
+
+        pet.add_task(Task("Dinner", "Evening meal", 10, 5, "feeding", scheduled_time="18:00"))
+        pet.add_task(Task("Breakfast", "Morning meal", 10, 5, "feeding", scheduled_time="08:00"))
+        pet.add_task(Task("Walk", "Morning walk", 30, 4, "exercise", scheduled_time="09:30"))
+
+        scheduler = Scheduler(owner, pet, 120)
+        sorted_tasks = scheduler.sort_by_time()
+
+        assert [t.name for t in sorted_tasks] == ["Breakfast", "Walk", "Dinner"]
+
+    def test_filter_tasks_by_pet_and_completed(self):
+        """Verify filtering tasks by pet name and completion status."""
+        owner = Owner("Jordan", "jordan@example.com", 120)
+        mochi = Pet("Mochi", "dog", 3)
+        luna = Pet("Luna", "cat", 5)
+        owner.add_pet(mochi)
+        owner.add_pet(luna)
+
+        done_task = Task("Breakfast", "Feed", 10, 5, "feeding")
+        done_task.mark_complete()
+        pending_task = Task("Walk", "Walk", 30, 4, "exercise")
+        luna_task = Task("Litter Box", "Clean", 10, 4, "maintenance")
+
+        mochi.add_task(done_task)
+        mochi.add_task(pending_task)
+        luna.add_task(luna_task)
+
+        scheduler = Scheduler(owner, mochi, 120)
+        filtered = scheduler.filter_tasks(pet_name="Mochi", completed=False)
+
+        assert len(filtered) == 1
+        assert filtered[0].name == "Walk"
+
+    def test_mark_task_complete_creates_next_daily_task(self):
+        """Verify completing a daily task creates a new task for the next day."""
+        owner = Owner("Jordan", "jordan@example.com", 120)
+        pet = Pet("Mochi", "dog", 3)
+        owner.add_pet(pet)
+
+        task = Task(
+            "Breakfast",
+            "Feed breakfast",
+            10,
+            5,
+            "feeding",
+            frequency="daily",
+            scheduled_time="08:00",
+        )
+        pet.add_task(task)
+
+        scheduler = Scheduler(owner, pet, 120)
+        scheduler.mark_task_complete("Breakfast", pet_name="Mochi")
+
+        assert len(pet.get_tasks()) == 2
+        assert pet.get_tasks()[0].completed is True
+        assert pet.get_tasks()[1].completed is False
+        assert pet.get_tasks()[1].due_date == pet.get_tasks()[0].due_date + timedelta(days=1)
+
+    def test_detect_conflicts_returns_warnings(self):
+        """Verify conflict detection reports same-slot task clashes."""
+        owner = Owner("Jordan", "jordan@example.com", 120)
+        mochi = Pet("Mochi", "dog", 3)
+        luna = Pet("Luna", "cat", 5)
+        owner.add_pet(mochi)
+        owner.add_pet(luna)
+
+        mochi.add_task(Task("Breakfast", "Feed", 10, 5, "feeding", scheduled_time="08:00"))
+        luna.add_task(Task("Litter Box", "Clean", 10, 4, "maintenance", scheduled_time="08:00"))
+
+        scheduler = Scheduler(owner, mochi, 120)
+        warnings = scheduler.detect_conflicts()
+
+        assert len(warnings) == 1
+        assert "Conflict at 08:00" in warnings[0]
 
 
 # Integration Tests

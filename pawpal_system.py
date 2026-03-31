@@ -7,8 +7,8 @@ daily plans based on constraints and priorities.
 """
 
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Tuple
-from datetime import datetime, time, timedelta
+from typing import List, Dict, Optional, Tuple, Any
+from datetime import datetime, date, timedelta
 
 
 @dataclass
@@ -31,6 +31,8 @@ class Task:
     category: str
     frequency: str = "daily"
     completed: bool = False
+    scheduled_time: str = "08:00"
+    due_date: date = field(default_factory=date.today)
     
     def get_priority_score(self) -> int:
         """Calculate the priority score for scheduling."""
@@ -50,6 +52,13 @@ class Task:
     def mark_complete(self) -> None:
         """Mark this task as completed."""
         self.completed = True
+
+    def get_datetime_key(self) -> datetime:
+        """Return a sortable datetime key based on due date and scheduled time."""
+        return datetime.combine(
+            self.due_date,
+            datetime.strptime(self.scheduled_time, "%H:%M").time(),
+        )
     
     def __str__(self) -> str:
         """Return a readable string representation of the task."""
@@ -74,7 +83,7 @@ class Pet:
     special_needs: List[str] = field(default_factory=list)
     tasks: List[Task] = field(default_factory=list)
     
-    def get_info(self) -> Dict[str, any]:
+    def get_info(self) -> Dict[str, Any]:
         """Return pet information as a dictionary."""
         return {
             "name": self.name,
@@ -111,7 +120,7 @@ class Owner:
     name: str
     email: str
     available_time_per_day: int  # in minutes
-    preferences: Dict[str, any] = field(default_factory=dict)
+    preferences: Dict[str, Any] = field(default_factory=dict)
     pets: List[Pet] = field(default_factory=list)
     
     def add_pet(self, pet: Pet) -> None:
@@ -122,7 +131,7 @@ class Owner:
         """Retrieve all pets owned by this owner."""
         return self.pets
     
-    def set_preferences(self, prefs: Dict[str, any]) -> None:
+    def set_preferences(self, prefs: Dict[str, Any]) -> None:
         """Update the owner's preferences and constraints."""
         self.preferences.update(prefs)
     
@@ -152,6 +161,73 @@ class Scheduler:
     pet: Pet
     available_time: int
     daily_schedule: List[Task] = field(default_factory=list)
+
+    def sort_by_time(self, tasks: Optional[List[Task]] = None) -> List[Task]:
+        """Return tasks sorted by due date and HH:MM scheduled time."""
+        source_tasks = tasks if tasks is not None else self.pet.get_tasks()
+        return sorted(source_tasks, key=lambda task: task.get_datetime_key())
+
+    def filter_tasks(
+        self,
+        tasks: Optional[List[Task]] = None,
+        pet_name: Optional[str] = None,
+        completed: Optional[bool] = None,
+    ) -> List[Task]:
+        """Filter tasks by pet name and/or completion status."""
+        if tasks is not None:
+            filtered = list(tasks)
+        elif pet_name:
+            pet = self._find_pet(pet_name)
+            filtered = pet.get_tasks() if pet else []
+        else:
+            filtered = self.owner.get_all_tasks()
+
+        if completed is not None:
+            filtered = [task for task in filtered if task.completed is completed]
+
+        return filtered
+
+    def mark_task_complete(self, task_name: str, pet_name: Optional[str] = None) -> Optional[Task]:
+        """Mark a task complete and create the next recurring task if applicable."""
+        target_pet = self._find_pet(pet_name) if pet_name else self.pet
+        if target_pet is None:
+            return None
+
+        for task in target_pet.get_tasks():
+            if task.name == task_name and not task.completed:
+                task.mark_complete()
+                self._create_recurring_follow_up(task, target_pet)
+                return task
+
+        return None
+
+    def detect_conflicts(self, tasks: Optional[List[Task]] = None) -> List[str]:
+        """Return warning messages for tasks scheduled at identical date/time values."""
+        task_sources: List[Tuple[str, Task]] = []
+
+        if tasks is not None:
+            task_sources = [(self.pet.name, task) for task in tasks]
+        else:
+            for pet in self.owner.get_pets():
+                for task in pet.get_tasks():
+                    task_sources.append((pet.name, task))
+
+        by_slot: Dict[Tuple[date, str], List[Tuple[str, Task]]] = {}
+        for pet_name, task in task_sources:
+            slot = (task.due_date, task.scheduled_time)
+            by_slot.setdefault(slot, []).append((pet_name, task))
+
+        warnings: List[str] = []
+        for (due, start_time), grouped in by_slot.items():
+            if len(grouped) > 1:
+                task_labels = ", ".join(
+                    f"{task.name} ({pet_name})" for pet_name, task in grouped
+                )
+                warnings.append(
+                    f"Conflict at {start_time} on {due.isoformat()}: {task_labels}"
+                )
+
+        return warnings
     
     def generate_schedule(self) -> List[Task]:
         """Create an optimal daily schedule for pet care tasks.
@@ -190,6 +266,38 @@ class Scheduler:
         """Sort tasks by priority and importance."""
         # Sort by priority score in descending order (highest first)
         return sorted(tasks, key=lambda t: t.get_priority_score(), reverse=True)
+
+    def _find_pet(self, pet_name: Optional[str]) -> Optional[Pet]:
+        """Find a pet by name on the owner account."""
+        if not pet_name:
+            return None
+
+        target = pet_name.strip().lower()
+        for owned_pet in self.owner.get_pets():
+            if owned_pet.name.strip().lower() == target:
+                return owned_pet
+        return None
+
+    def _create_recurring_follow_up(self, completed_task: Task, pet: Pet) -> None:
+        """Create the next task occurrence for daily or weekly recurring tasks."""
+        frequency = completed_task.frequency.lower()
+        offset = {"daily": 1, "weekly": 7}.get(frequency)
+        if offset is None:
+            return
+
+        next_due_date = completed_task.due_date + timedelta(days=offset)
+        next_task = Task(
+            name=completed_task.name,
+            description=completed_task.description,
+            duration_minutes=completed_task.duration_minutes,
+            priority=completed_task.priority,
+            category=completed_task.category,
+            frequency=completed_task.frequency,
+            completed=False,
+            scheduled_time=completed_task.scheduled_time,
+            due_date=next_due_date,
+        )
+        pet.add_task(next_task)
     
     def assign_times(self, tasks: List[Task]) -> Dict[str, Tuple[str, str]]:
         """Assign start times to each task in the schedule.

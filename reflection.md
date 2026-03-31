@@ -85,6 +85,17 @@ My implementation uses a **greedy algorithm** - it sorts tasks by priority and f
 
 *Downside:* Might not maximize task count fits in some edge cases.
 
+**Tradeoff: Exact-match conflict detection instead of overlap detection**
+
+The conflict checker currently flags warnings when two tasks have the exact same date and start time (for example, both at 08:00). It does not yet compute full duration overlap windows (for example, 08:00-08:30 overlapping with 08:15-08:45).
+
+*Why this tradeoff is reasonable:*
+- **Lightweight implementation**: Fast and easy to reason about while building core features
+- **Clear user feedback**: Exact clashes are the most obvious schedule mistakes
+- **Low complexity**: Avoids introducing time-range logic before basic planning is stable
+
+*Downside:* Some partial overlaps can be missed until a later, more advanced conflict algorithm is added.
+
 ---
 
 ## 3. AI Collaboration
