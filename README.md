@@ -52,3 +52,20 @@ The scheduling layer now includes lightweight algorithms to make planning more p
 - Conflict detection: exact date/time collisions across pets are flagged as warnings.
 
 You can see these features in action by running the CLI demo in main.py and reviewing the terminal output sections for sorting/filtering, conflicts, and recurring completion behavior.
+
+## Testing PawPal+
+
+Run the automated test suite with:
+
+```bash
+python -m pytest
+```
+
+The tests cover core scheduler behavior, including:
+
+- Sorting correctness for chronological task ordering.
+- Recurrence logic that creates the next daily task when one is completed.
+- Conflict detection for duplicate scheduled date/time slots.
+- Additional happy paths and edge cases like pets with no tasks, filtering by completion, and full workflow integration.
+
+Confidence Level: ★★★★☆ (4/5)
