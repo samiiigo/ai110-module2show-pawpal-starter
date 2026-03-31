@@ -1,6 +1,6 @@
 # PawPal+ (Module 2 Project)
 
-You are building **PawPal+**, a Streamlit app that helps a pet owner plan care tasks for their pet.
+PawPal+ is a Streamlit app that helps a pet owner plan daily care tasks with simple but practical scheduling intelligence.
 
 ## Scenario
 
@@ -12,15 +12,15 @@ A busy pet owner needs help staying consistent with pet care. They want an assis
 
 Your job is to design the system first (UML), then implement the logic in Python, then connect it to the Streamlit UI.
 
-## What you will build
+## Features
 
-Your final app should:
-
-- Let a user enter basic owner + pet info
-- Let a user add/edit tasks (duration + priority at minimum)
-- Generate a daily schedule/plan based on constraints and priorities
-- Display the plan clearly (and ideally explain the reasoning)
-- Include tests for the most important scheduling behaviors
+- Owner and pet profile setup in a simple Streamlit workflow.
+- Task creation with priority, category, frequency, date, and time.
+- Sorting by time using due date + HH:MM slots.
+- Filtering by completion status (all, pending, completed).
+- Conflict warnings for duplicate date/time tasks across pets.
+- Recurrence automation: completing daily or weekly tasks auto-creates the next occurrence.
+- Time-constrained daily schedule generation with readable plan explanations.
 
 ## Getting started
 
@@ -52,6 +52,14 @@ The scheduling layer now includes lightweight algorithms to make planning more p
 - Conflict detection: exact date/time collisions across pets are flagged as warnings.
 
 You can see these features in action by running the CLI demo in main.py and reviewing the terminal output sections for sorting/filtering, conflicts, and recurring completion behavior.
+
+## System Architecture
+
+The final UML class diagram is included as [uml_final.svg](uml_final.svg).
+
+## 📸 Demo
+
+<a href="/course_images/ai110/pawpal_ui_final.png" target="_blank"><img src='/course_images/ai110/pawpal_ui_final.png' title='PawPal App' width='' alt='PawPal App' class='center-block' /></a>
 
 ## Testing PawPal+
 

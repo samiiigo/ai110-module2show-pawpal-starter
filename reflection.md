@@ -102,13 +102,28 @@ The conflict checker currently flags warnings when two tasks have the exact same
 
 **a. How you used AI**
 
-- How did you use AI tools during this project (for example: design brainstorming, debugging, refactoring)?
-- What kinds of prompts or questions were most helpful?
+I used VS Code Copilot in distinct ways across phases:
+
+1. **Design brainstorming** - I asked Copilot to pressure-test my class responsibilities before coding (for example, where recurrence and conflict logic should live). This helped me keep behavior in `Scheduler` and avoid scattering logic across the UI.
+2. **Implementation acceleration** - I used suggestions for method scaffolding and repetitive test patterns, then edited details manually.
+3. **Debugging support** - When tests failed during development, I asked Copilot to explain failure causes and whether the issue was likely in assertion logic or scheduling behavior.
+4. **Documentation drafting** - I used Copilot to draft concise README and reflection language, then rewrote sections to match what I actually implemented.
+
+Most helpful prompts were specific and grounded in my files, such as:
+- "Given this `Scheduler` implementation, what edge cases are most likely to break recurrence?"
+- "Explain why this conflict test might pass even when overlap logic is incomplete."
+- "Suggest tests for exact time collisions vs. no-collision control cases."
 
 **b. Judgment and verification**
 
-- Describe one moment where you did not accept an AI suggestion as-is.
-- How did you evaluate or verify what the AI suggested?
+One AI suggestion I rejected was to implement complex overlap-based conflict detection immediately (full interval intersection) while I was still stabilizing exact-slot conflict behavior.
+
+I modified that suggestion to keep a simpler exact date/time collision detector first, because:
+1. It matched current requirements and test scope.
+2. It reduced risk of introducing subtle time math bugs.
+3. It kept the code easier to explain during demos.
+
+I verified this decision by writing/keeping tests for duplicate-time warnings and ensuring they passed consistently, while documenting overlap detection as a future enhancement.
 
 ---
 
@@ -116,13 +131,25 @@ The conflict checker currently flags warnings when two tasks have the exact same
 
 **a. What you tested**
 
-- What behaviors did you test?
-- Why were these tests important?
+I tested:
+
+1. **Sorting correctness** - tasks are returned in chronological order.
+2. **Recurrence behavior** - completing a daily task creates a new task for the next day.
+3. **Conflict detection** - duplicate date/time slots produce warnings.
+4. **Schedule generation constraints** - generated plans stay within available time.
+5. **Edge paths** - pets with no tasks, completion filtering behavior, and end-to-end workflow.
+
+These tests are important because they validate both expected user experience (happy path) and failure-prone boundaries (time conflicts, empty task lists, recurring state changes).
 
 **b. Confidence**
 
-- How confident are you that your scheduler works correctly?
-- What edge cases would you test next if you had more time?
+My confidence is **4/5**. The existing suite gives strong coverage for the implemented logic and common edge cases.
+
+Next edge cases I would test:
+1. Weekly recurrence date rollovers across month/year boundaries.
+2. Multiple tasks with the same name on one pet when marking completion.
+3. Robust handling of malformed time strings if external input bypasses the UI.
+4. Future overlap-based conflicts (08:00-08:30 vs. 08:15-08:45), not just exact-time clashes.
 
 ---
 
@@ -130,12 +157,19 @@ The conflict checker currently flags warnings when two tasks have the exact same
 
 **a. What went well**
 
-- What part of this project are you most satisfied with?
+I am most satisfied with the separation of concerns: data classes model the domain cleanly, while `Scheduler` owns scheduling intelligence. That structure made it much easier to test and to connect logic to the Streamlit UI without duplicating business rules.
 
 **b. What you would improve**
 
-- If you had another iteration, what would you improve or redesign?
+In another iteration, I would add:
+
+1. True interval-based conflict detection.
+2. Better identity for tasks (IDs) so completion actions are unambiguous when names repeat.
+3. Multi-pet daily optimization that allocates shared owner time globally across all pets.
+4. Persistent storage so tasks and completions survive app restarts.
 
 **c. Key takeaway**
 
-- What is one important thing you learned about designing systems or working with AI on this project?
+My biggest takeaway is that AI can accelerate implementation, but architectural quality still depends on deliberate human decisions. The strongest results came when I treated Copilot as a collaborator for options and speed, while I stayed responsible for boundaries, tradeoffs, and verification.
+
+Using separate chat sessions by phase helped me stay organized: design conversations stayed conceptual, test conversations stayed evidence-based, and polish conversations focused on UX/docs. That separation reduced context drift and made decisions easier to audit.
